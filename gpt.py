@@ -12,7 +12,7 @@ TRAINING_ITERS = 32000
 EVAL_ITERS = 200
 DROPOUT = 0.1
 NUM_BLOCKS = 2 
-
+DEVICE = 'cpu'
 
 # Load data
 f = open("input.txt", "r")
@@ -46,6 +46,7 @@ def get_batch(
   block_start_idx = torch.randint(0, len(data)-block_size-1, (batch_size,))
   X = torch.stack([data[idx:idx+block_size] for idx in block_start_idx])
   Y = torch.stack([data[idx+1:idx+block_size+1] for idx in block_start_idx])
+  X, Y = X.to(DEVICE), Y.to(DEVICE)
   return X, Y
 
 def evaluate_loss(model):
@@ -134,7 +135,8 @@ class GPTModel(nn.Module):
     self.lm = nn.Linear(N_EMBD, vocab_size)
 
   def forward(self, input_idx, target=None):
-    x = self.embedding_table(input_idx) + self.pos_embedding_table(input_idx)
+    B, T = input_idx.shape
+    x = self.embedding_table(input_idx) + self.pos_embedding_table(torch.arange(T, device=DEVICE))
     logits = nn.Sequential(*self.blocks, self.ln_f, self.lm)(x)
     loss = None
     B, T, C = logits.shape 
@@ -142,7 +144,6 @@ class GPTModel(nn.Module):
       loss = nn.functional.cross_entropy(logits.view(B*T, C), target.view(B*T))
     return logits, loss
       
-
 
   def generate(self, input_idx, max_num_samples):
     idx = input_idx # input_idx # (B, T)
@@ -158,6 +159,7 @@ class GPTModel(nn.Module):
 
 
 model = GPTModel(vocab_size)
+model.to(DEVICE)
 optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
 
 for i in range(TRAINING_ITERS):
