@@ -2,16 +2,16 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-BLOCK_SIZE = 8  # context window size
-BATCH_SIZE = 4
-N_EMBD = 128   # embedding size, should = N_HEADS * HEAD_SIZE
-NUM_HEAD = 4   # number of heads in multi-head attention
-HEAD_SIZE = 32 # size of each head
+BLOCK_SIZE = 128  # context window size
+BATCH_SIZE = 32
+N_EMBD = 384   # embedding size, should = N_HEADS * HEAD_SIZE
+NUM_HEAD = 6   # number of heads in multi-head attention
+HEAD_SIZE = 64 # size of each head
 LR = 3e-3
-TRAINING_ITERS = 32000
-EVAL_ITERS = 200
+TRAINING_ITERS = 500
+EVAL_ITERS = 2
 DROPOUT = 0.1
-NUM_BLOCKS = 2 
+NUM_BLOCKS = 6 
 DEVICE = 'cpu'
 
 # Load data
@@ -129,7 +129,7 @@ class GPTModel(nn.Module):
   def __init__(self, vocab_size):
     super().__init__()
     self.embedding_table=nn.Embedding(vocab_size, N_EMBD)
-    self.pos_embedding_table = nn.Embedding(vocab_size, N_EMBD)
+    self.pos_embedding_table = nn.Embedding(BLOCK_SIZE, N_EMBD)
     self.blocks = [Block(N_EMBD, HEAD_SIZE, NUM_HEAD) for i in range(NUM_BLOCKS)]
     self.ln_f = nn.LayerNorm(N_EMBD)
     self.lm = nn.Linear(N_EMBD, vocab_size)
@@ -158,8 +158,7 @@ class GPTModel(nn.Module):
   
 
 
-model = GPTModel(vocab_size)
-model.to(DEVICE)
+model = GPTModel(vocab_size).to(DEVICE)
 optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
 
 for i in range(TRAINING_ITERS):
@@ -168,5 +167,5 @@ for i in range(TRAINING_ITERS):
   optimizer.zero_grad()
   loss.backward()
   optimizer.step()
-  if i%500==0:
+  if i%20==0:
     print(evaluate_loss(model))
